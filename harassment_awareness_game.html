@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>情境抉擇遊戲：你的選擇是什麼？</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .choice-button {
+            transition: all 0.2s ease-in-out;
+        }
+        .choice-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+        .scene-enter {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        .scene-enter-active {
+            opacity: 1;
+            transform: translateY(0);
+            transition: all 0.5s ease-out;
+        }
+    </style>
+</head>
+<body class="bg-gray-800 text-white flex items-center justify-center min-h-screen">
+
+    <div id="game-container" class="w-full max-w-2xl mx-auto p-4 md:p-8 bg-gray-900 rounded-2xl shadow-2xl">
+        
+        <!-- Start Screen -->
+        <div id="start-screen">
+            <h1 class="text-3xl md:text-4xl font-bold text-center text-teal-300 mb-2">情境抉擇遊戲</h1>
+            <p class="text-center text-gray-400 mb-8">面對複雜的性騷擾情境，你的選擇，會帶來什麼樣的結果？</p>
+            <div id="scenario-list" class="space-y-4">
+                <!-- Scenarios will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="game-screen" class="hidden">
+            <div id="story-text" class="text-lg text-gray-300 leading-relaxed mb-8 p-4 bg-gray-800 rounded-lg min-h-[120px]"></div>
+            <div id="choices-container" class="grid grid-cols-1 gap-4">
+                <!-- Choices will be loaded here -->
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const gameContainer = document.getElementById('game-container');
+        const startScreen = document.getElementById('start-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const scenarioList = document.getElementById('scenario-list');
+        const storyText = document.getElementById('story-text');
+        const choicesContainer = document.getElementById('choices-container');
+
+        const scenarios = {
+            dreamInternship: {
+                title: '夢想的實習機會',
+                description: '你獲得了夢寐以求的實習機會，但你的指導者似乎對你有些「特別」的關注...',
+                startNode: 'start'
+            },
+            friendInNeed: {
+                title: '朋友的求助',
+                description: '你的好友向你哭訴，她在派對上似乎被學長騷擾了，你該怎麼幫助她？',
+                startNode: 'start'
+            },
+            lockerRoomTalk: {
+                title: '休息室的玩笑話',
+                description: '球隊休息室裡，學長們總愛開一些不尊重女性的玩笑，這次，他們提到了你的朋友...',
+                startNode: 'start'
+            }
+        };
+
+        const storyData = {
+            dreamInternship: {
+                start: {
+                    text: '你進入了一家頂尖的公司實習，指導你的是業界赫赫有名的大前輩。一天深夜，你收到了他的訊息：「睡了嗎？關於你上次的提案，想跟你私下聊聊，明天晚上來我家喝杯小酒順便討論？」',
+                    choices: [
+                        { text: '答應赴約，這是我表現自己的大好機會！', next: 'goToHouse' },
+                        { text: '委婉拒絕，提議改在公司會議室討論。', next: 'suggestOffice' },
+                        { text: '已讀不回，假裝沒看到這個訊息。', next: 'ignoreMessage' }
+                    ]
+                },
+                goToHouse: {
+                    text: '你依約前往。前輩稱讚你的才華，卻開始聊起私生活，甚至把手搭到你的肩膀上。氣氛越來越不對勁。',
+                    choices: [
+                        { text: '藉口家裡有事，立刻起身告辭。', next: 'leaveImmediately' },
+                        { text: '尷尬地笑著，默默把他的手推開。', next: 'pushHandAway' }
+                    ]
+                },
+                suggestOffice: {
+                    text: '你回覆：「謝謝前輩！我很期待！約在公司會議室您方便嗎？」對方很久才回了一個「好。」隔天開始，他對你的態度變得非常冷淡，並開始挑剔你工作上各種小毛病。',
+                    choices: [
+                        { text: '默默忍受，希望用實力證明自己。', next: 'endureIt' },
+                        { text: '向學校的實習輔導老師反應狀況。', next: 'reportToTeacher' }
+                    ]
+                },
+                ignoreMessage: {
+                    text: '隔天在公司，前輩把你叫進辦公室，關上門。「你為什麼不回我訊息？是不是覺得自己很了不起？」他的語氣充滿了壓迫感。',
+                    choices: [
+                        { text: '趕緊道歉，說自己昨晚睡著了沒看到。', next: 'apologize' },
+                        { text: '直接問他深夜傳那種訊息是什麼意思。', next: 'confront' }
+                    ]
+                },
+                leaveImmediately: {
+                    outcome: {
+                        title: '結局：劃清界線',
+                        description: '雖然有些尷尬，但你成功地離開了危險的環境。之後前輩對你態度冷淡，但你保護了自己，並開始尋找其他更尊重人的工作環境。'
+                    }
+                },
+                pushHandAway: {
+                     outcome: {
+                        title: '結局：模糊地帶',
+                        description: '你試圖用非言語的方式拒絕，但對方可能沒有會意，甚至變本加厲。這種模糊的應對方式，讓你長時間處於壓力和不安之中。'
+                    }
+                },
+                endureIt: {
+                     outcome: {
+                        title: '結局：壓抑的實習',
+                        description: '你努力工作，但前輩的冷暴力和刁難讓你的實習生活充滿痛苦。你或許能完成實習，但這段經歷已在你的心中留下陰影。'
+                    }
+                },
+                reportToTeacher: {
+                     outcome: {
+                        title: '結局：尋求支援',
+                        description: '你勇敢地向外求助。學校介入調查，雖然過程很辛苦，但你讓制度發揮了作用，保護了自己，也可能保護了未來的學弟妹。'
+                    }
+                },
+                apologize: {
+                     outcome: {
+                        title: '結局：屈服於權力',
+                        description: '你在權力下選擇了退縮。雖然暫時化解了衝突，但對方知道了可以用權勢壓迫你，未來可能會提出更過分的要求。'
+                    }
+                },
+                confront: {
+                     outcome: {
+                        title: '結局：玉石俱焚',
+                        description: '你的直接挑戰激怒了對方。他利用職權讓你實習不合格，並在業界毀損你的名聲。雖然你勇敢地反抗，但也付出了慘痛的代價。'
+                    }
+                }
+            },
+            friendInNeed: {
+                start: {
+                    text: '你最好的朋友小敏哭著打給你，說昨晚社團迎新會上，她喝多了，很有名的阿文學長送她回家時，在路上對她動手動腳。她現在很害怕，不知道該怎麼辦。',
+                    choices: [
+                        { text: '告訴她：「這太嚴重了！我們立刻去學校的性平會！」', next: 'goToCommittee' },
+                        { text: '氣憤地說：「太可惡了！我們把這件事發到IG公審他！」', next: 'postOnIG' },
+                        { text: '安慰她：「你是不是想太多？學長可能只是關心你...」', next: 'victimBlame' }
+                    ]
+                },
+                goToCommittee: {
+                     outcome: {
+                        title: '結局：信任體制',
+                        description: '你們一起向學校求助。雖然調查過程漫長且充滿壓力，但這是最能保護小敏、並讓行為人負起責任的正式管道。你作為朋友的支持，是她走下去的最大力量。'
+                    }
+                },
+                postOnIG: {
+                    text: '你們把事情經過寫下發到網路上，立刻引起軒然大波。學長的朋友們開始攻擊小敏，說她「愛玩」、「活該」，甚至有不認識的網友對她進行人身攻擊。',
+                    choices: [
+                        { text: '承受壓力，繼續在網路上和他們對抗。', next: 'fightOnline' },
+                        { text: '不堪其擾，刪除文章並關閉帳號。', next: 'deletePost' }
+                    ]
+                },
+                victimBlame: {
+                     outcome: {
+                        title: '結局：二次傷害',
+                        description: '你的話深深刺傷了小敏。她鼓起勇氣求助，卻被最信任的朋友質疑。她不再對你說任何事，自己默默承受所有痛苦，你們的友誼也因此破裂。'
+                    }
+                },
+                 fightOnline: {
+                     outcome: {
+                        title: '結局：輿論的風暴',
+                        description: '網路的口水戰讓事情徹底失焦，沒有人關心真相，只有立場。小敏和你都承受了巨大的精神壓力，這就是所謂的「二次傷害」。'
+                    }
+                },
+                deletePost: {
+                     outcome: {
+                        title: '結局：失控的戰場',
+                        description: '雖然刪文了，但截圖早已傳開。小敏被打成「誣告別人又心虛刪文」的標籤，處境比之前更艱難。網路的匿名性讓正義變得非常複雜。'
+                    }
+                }
+            },
+            lockerRoomTalk: {
+                start: {
+                    text: '你是籃球隊的新隊員小傑。休息室裡，學長們總是用不堪的言詞評論女生的身材，大家也都習以為常。今天，隊長開始用輕浮的綽號討論你的朋友小希。',
+                    choices: [
+                        { text: '當場制止：「學長，請你不要這樣說我朋友。」', next: 'confrontCaptain' },
+                        { text: '私下找教練談，希望能改善球隊風氣。', next: 'talkToCoach' },
+                        { text: '尷尬地笑著，什麼也沒說。', next: 'doNothing' }
+                    ]
+                },
+                confrontCaptain: {
+                    text: '隊長愣了一下，隨即惱羞成怒：「新來的懂不懂規矩啊？開不起玩笑就滾出去！」整個休息室的氣氛瞬間凝固，所有人都看著你。',
+                    choices: [
+                        { text: '堅持自己的立場，不退縮。', next: 'standGround' },
+                        { text: '趕緊道歉，說自己太衝動了。', next: 'apologizeToCaptain' }
+                    ]
+                },
+                talkToCoach: {
+                     outcome: {
+                        title: '結局：尋求體制協助',
+                        description: '教練是個明理的人。他找了隊長私下溝通，並在之後的集會中宣導了互相尊重的觀念。雖然風氣不會一夕改變，但你用最安全的方式，踏出了改變的第一步。'
+                    }
+                },
+                doNothing: {
+                     outcome: {
+                        title: '結局：沉默的共犯',
+                        description: '你的沉默，被當成了默許。學長們的玩笑變本加厲，你內心充滿了對朋友的愧疚與對自己的失望。你為了融入群體，卻失去了更重要的東西。'
+                    }
+                },
+                standGround: {
+                     outcome: {
+                        title: '結局：被孤立的勇者',
+                        description: '你勇敢地捍衛了朋友，卻也因此被整個球隊排擠。做正確的事有時需要付出代價，這份孤獨，是你為正義付出的勳章。'
+                    }
+                },
+                 apologizeToCaptain: {
+                     outcome: {
+                        title: '結局：屈服的群體壓力',
+                        description: '你屈服了。雖然暫時化解了衝突，但你也向這個團體證明了：他們的錯誤文化是不可挑戰的。你的內心充滿了無力感。'
+                    }
+                }
+            }
+        };
+
+        let currentStory;
+        
+        function startGame(scenarioId) {
+            currentStory = storyData[scenarioId];
+            startScreen.classList.add('hidden');
+            gameScreen.classList.remove('hidden');
+            showNode(scenarios[scenarioId].startNode);
+        }
+
+        function showNode(nodeId) {
+            const node = currentStory[nodeId];
+            
+            // Add animation class
+            gameScreen.classList.remove('scene-enter-active');
+            gameScreen.classList.add('scene-enter');
+
+            // Delay content update for animation
+            setTimeout(() => {
+                storyText.innerHTML = ''; // Clear previous text
+                choicesContainer.innerHTML = ''; // Clear previous choices
+
+                if (node.outcome) {
+                    storyText.innerHTML = `<h2 class="text-2xl font-bold text-teal-300 mb-4">${node.outcome.title}</h2><p>${node.outcome.description}</p>`;
+                    const restartButton = document.createElement('button');
+                    restartButton.textContent = '回到主選單';
+                    restartButton.className = 'w-full p-4 bg-teal-600 text-white font-bold rounded-lg choice-button';
+                    restartButton.onclick = showStartScreen;
+                    choicesContainer.appendChild(restartButton);
+                } else {
+                    storyText.textContent = node.text;
+                    node.choices.forEach(choice => {
+                        const button = document.createElement('button');
+                        button.textContent = choice.text;
+                        button.className = 'w-full p-4 bg-gray-700 text-left text-white font-semibold rounded-lg choice-button';
+                        button.onclick = () => showNode(choice.next);
+                        choicesContainer.appendChild(button);
+                    });
+                }
+                
+                // Trigger animation
+                gameScreen.classList.add('scene-enter-active');
+
+            }, 100); // A small delay
+        }
+
+        function showStartScreen() {
+            gameScreen.classList.add('hidden');
+            startScreen.classList.remove('hidden');
+        }
+
+        // Initialize start screen
+        Object.keys(scenarios).forEach(id => {
+            const scenario = scenarios[id];
+            const button = document.createElement('button');
+            button.className = 'w-full p-6 bg-gray-700 text-left rounded-lg choice-button';
+            button.innerHTML = `
+                <h3 class="text-xl font-bold text-teal-400">${scenario.title}</h3>
+                <p class="text-gray-400 mt-1">${scenario.description}</p>
+            `;
+            button.onclick = () => startGame(id);
+            scenarioList.appendChild(button);
+        });
+    </script>
+</body>
+</html>
